@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-ts"
+  provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
@@ -24,14 +24,24 @@ enum AnswerStyle {
 }
 
 model User {
-  id           Int         @id @default(autoincrement())
-  socialId     String
-  provider     Provider
-  nickname     String      @db.VarChar(8)
-  profileImage String?
-  answerStyle  AnswerStyle @default(story)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id            Int            @id @default(autoincrement())
+  socialId      String
+  provider      Provider
+  nickname      String?        @db.VarChar(8)
+  profileImage  String?
+  answerStyle   AnswerStyle    @default(story)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
 
   @@unique([socialId, provider])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
