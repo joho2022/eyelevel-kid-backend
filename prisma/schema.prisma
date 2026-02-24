@@ -6,10 +6,32 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  kakao
+  google
+}
+
+enum AnswerStyle {
+  story
+  reason
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  socialId     String
+  provider     Provider
+  nickname     String      @db.VarChar(8)
+  profileImage String?
+  answerStyle  AnswerStyle @default(story)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([socialId, provider])
 }
