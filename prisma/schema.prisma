@@ -28,7 +28,6 @@ model User {
   provider      Provider
   nickname      String?        @db.VarChar(8)
   profileImage  String?
-  answerStyle   AnswerStyle    @default(story)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
