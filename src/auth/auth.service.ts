@@ -11,7 +11,7 @@ import { Provider } from '@prisma/client';
 import { AuthProvider } from './enums/auth-provider.enum';
 import { OAuth2Client } from 'google-auth-library';
 import * as appleSignin from 'apple-signin-auth';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { SocialLoginResponseDto } from './dto/response/social-login.response.dto';
 import { RefreshResponseDto } from './dto/response/refresh.response.dto';
 import { randomUUID } from 'crypto';
@@ -54,7 +54,12 @@ export class AuthService {
         }
         socialId = payload.sub;
       } catch (error) {
-        console.error('Google Auth Error:', error.message);
+        if (error instanceof Error) {
+          console.error('Google Auth Error:', error.message);
+        } else {
+          console.error('Google Auth Error:', error);
+        }
+
         throw new UnauthorizedException('구글 인증에 실패했습니다.');
       }
     } else if (provider === AuthProvider.apple) {
@@ -71,7 +76,12 @@ export class AuthService {
         }
         socialId = payload.sub;
       } catch (error) {
-        console.error('Apple Auth Error:', error.message);
+        if (error instanceof Error) {
+          console.error('Apple Auth Error:', error.message);
+        } else {
+          console.error('Apple Auth Error:', error);
+        }
+
         throw new UnauthorizedException('애플 인증에 실패했습니다.');
       }
     } else {

@@ -24,7 +24,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT ?? 4000, process.env.HOST ?? '0.0.0.0');
 }
 bootstrap().catch((err) => {
   console.error('서버 시작 실패:', err);
