@@ -3,6 +3,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
+import { QuestionModule } from './question/question.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -17,11 +18,14 @@ import * as Joi from 'joi';
         //APPLE_CLIENT_ID: Joi.string().required(),
         PORT: Joi.number().default(4000),
         HOST: Joi.string().default('0.0.0.0'),
+        SUPABASE_URL: Joi.string().uri().required(),
+        SUPABASE_SERVICE_ROLE_KEY: Joi.string().required(),
       }),
     }),
     PrismaModule,
     AuthModule,
     UserModule,
+    QuestionModule,
   ],
 })
 export class AppModule {}

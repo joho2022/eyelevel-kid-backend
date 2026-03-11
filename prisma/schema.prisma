@@ -31,6 +31,7 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
+  questions     Question[]
 
   @@unique([socialId, provider])
 }
@@ -42,5 +43,18 @@ model RefreshToken {
   userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Question {
+  id           Int         @id @default(autoincrement())
+  title        String
+  answer       String
+  style        AnswerStyle
+  isBookmarked Boolean     @default(false)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
   createdAt DateTime @default(now())
 }
