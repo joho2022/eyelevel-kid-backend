@@ -1,4 +1,4 @@
-import { AnswerStyle } from 'generated/prisma/enums';
+import { AnswerStyle } from '@prisma/client';
 
 import { IsString, IsEnum } from 'class-validator';
 
