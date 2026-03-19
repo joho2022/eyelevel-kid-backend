@@ -21,7 +21,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Req() req: any): Promise<UserResponseDto> {
-    const userId = req.user.id;
+    const userId = req.user.sub;
 
     const user = await this.userService.findById(userId);
 
@@ -35,7 +35,7 @@ export class UserController {
     @Req() req: any,
     @Body() dto: UpdateUserRequestDto,
   ): Promise<UserResponseDto> {
-    const userId = req.user.id;
+    const userId = req.user.sub;
 
     const user = await this.userService.updateUser(userId, dto);
 
@@ -48,7 +48,7 @@ export class UserController {
   async createProfileImageUploadUrl(
     @Req() req: any,
   ): Promise<ProfileImageUploadUrlResponseDto> {
-    const userId = req.user.id;
+    const userId = req.user.sub;
 
     const result = await this.userService.createProfileImageUploadUrl(userId);
 

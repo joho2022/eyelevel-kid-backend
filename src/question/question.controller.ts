@@ -23,7 +23,7 @@ export class QuestionController {
   // MARK: - 질문 생성
   @Post()
   async createQuestion(@Req() req: any, @Body() dto: AskQuestionRequestDto) {
-    return this.questionService.createQuestion(req.user.id, dto);
+    return this.questionService.createQuestion(req.user.sub, dto);
   }
 
   // MARK: - 달력 요약 조회
@@ -33,7 +33,7 @@ export class QuestionController {
     @Query('year') year: number,
     @Query('month') month: number,
   ) {
-    return this.questionService.getCalendarSummary(req.user.id, year, month);
+    return this.questionService.getCalendarSummary(req.user.sub, year, month);
   }
 
   // MARK: - 달력 날짜 질문 조회
@@ -45,7 +45,7 @@ export class QuestionController {
     @Query('day') day: number,
   ) {
     return this.questionService.getQuestionsByDate(
-      req.user.id,
+      req.user.sub,
       year,
       month,
       day,
@@ -60,7 +60,7 @@ export class QuestionController {
     @Query('limit') limit = 20,
   ) {
     return this.questionService.getQuestions(
-      req.user.id,
+      req.user.sub,
       cursor,
       Number(limit),
     );
@@ -69,18 +69,18 @@ export class QuestionController {
   // MARK: - 북마크 토글
   @Patch(':id/bookmark')
   async toggleBookmark(@Req() req: any, @Param('id') id: number) {
-    return this.questionService.toggleBookmark(req.user.id, Number(id));
+    return this.questionService.toggleBookmark(req.user.sub, Number(id));
   }
 
   // MARK: - 질문 삭제
   @Delete(':id')
   async deleteQuestion(@Req() req: any, @Param('id') id: number) {
-    return this.questionService.deleteQuestion(req.user.id, Number(id));
+    return this.questionService.deleteQuestion(req.user.sub, Number(id));
   }
 
   // MARK: - 단일 질문 조회
   @Get(':id')
   async getQuestion(@Req() req: any, @Param('id') id: number) {
-    return this.questionService.getQuestion(req.user.id, Number(id));
+    return this.questionService.getQuestion(req.user.sub, Number(id));
   }
 }

@@ -1,6 +1,14 @@
 // src/auth/auth.controller.ts
 
-import { Body, Controller, Post, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Delete,
+  UseGuards,
+  Req,
+  HttpCode,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SocialLoginDto } from './dto/request/social-login.dto';
 import { RefreshDto } from './dto/request/refresh.dto';
@@ -25,14 +33,19 @@ export class AuthController {
   // MARK: - Logout
   @UseGuards(JwtAuthGuard)
   @Post('logout')
+  @HttpCode(204)
   logout(@Req() req, @Body() dto: RefreshDto) {
-    return this.authService.logout(req.user.userId, dto.refreshToken);
+    console.log('logout user', req.user);
+    console.log('logout body', dto);
+
+    return this.authService.logout(req.user.sub, dto.refreshToken);
   }
 
   // MARK: - Withdraw
   @UseGuards(JwtAuthGuard)
   @Delete('withdraw')
+  @HttpCode(204)
   withdraw(@Req() req) {
-    return this.authService.withdraw(req.user.userId);
+    return this.authService.withdraw(req.user.sub);
   }
 }

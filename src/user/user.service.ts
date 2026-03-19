@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
 import { supabase } from '../supabase/supabase.client';
@@ -46,20 +50,29 @@ export class UserService {
   async createProfileImageUploadUrl(userId: number) {
     const filePath = `users/${userId}/profile.jpg`;
 
+    await supabase.storage.from('images').remove([filePath]);
+
     const { data, error } = await supabase.storage
       .from('images')
       .createSignedUploadUrl(filePath);
 
     if (error) {
-      throw new Error('이미지 업로드 URL 생성 실패');
+      console.error('Supabase Error:', error);
+
+      throw new InternalServerErrorException(
+        '프로필 이미지를 업로드할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      );
     }
 
-    const imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/images/${filePath}`;
+    // public url 생성
+    const { data: publicData } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
 
     return {
       uploadUrl: data.signedUrl,
       token: data.token,
-      imageUrl,
+      imageUrl: `${publicData.publicUrl}?v=${Date.now()}`,
     };
   }
 }

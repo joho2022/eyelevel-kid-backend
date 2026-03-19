@@ -28,7 +28,7 @@ describe('AuthController (단위 테스트)', () => {
   class MockJwtAuthGuard implements CanActivate {
     canActivate(context: ExecutionContext) {
       const req = context.switchToHttp().getRequest();
-      req.user = { userId: 1 }; // 가짜 로그인 사용자 주입
+      req.user = { sub: 1 }; // 가짜 로그인 사용자 주입
       return true;
     }
   }
@@ -144,6 +144,8 @@ describe('AuthController (단위 테스트)', () => {
         .set('Authorization', 'Bearer mock')
         .send({ refreshToken: 'test' })
         .expect(201);
+
+      expect(mockAuthService.logout).toHaveBeenCalledWith(1, 'test');
     });
   });
 
@@ -157,6 +159,8 @@ describe('AuthController (단위 테스트)', () => {
         .delete('/auth/withdraw')
         .set('Authorization', 'Bearer mock')
         .expect(200);
+
+      expect(mockAuthService.withdraw).toHaveBeenCalledWith(1);
     });
   });
 });
