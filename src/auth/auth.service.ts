@@ -15,6 +15,7 @@ import bcrypt from 'bcrypt';
 import { SocialLoginResponseDto } from './dto/response/social-login.response.dto';
 import { RefreshResponseDto } from './dto/response/refresh.response.dto';
 import { randomUUID } from 'crypto';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
 export class AuthService {
@@ -26,10 +27,39 @@ export class AuthService {
   private static readonly REFRESH_EXPIRE = '30d';
   private static readonly REFRESH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000;
 
+  private s3Client: S3Client;
+  private bucketName: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const region = process.env.AWS_DEFAULT_REGION;
+    const endpoint = process.env.AWS_ENDPOINT_URL;
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (
+      !bucketName ||
+      !region ||
+      !endpoint ||
+      !accessKeyId ||
+      !secretAccessKey
+    ) {
+      throw new Error('S3 환경변수가 올바르게 설정되지 않았습니다.');
+    }
+
+    this.bucketName = bucketName;
+    this.s3Client = new S3Client({
+      region,
+      endpoint,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+  }
 
   // MARK: - Social Login
   async socialLogin(
@@ -215,6 +245,29 @@ export class AuthService {
   // MARK: - Withdraw
   async withdraw(userId: number): Promise<void> {
     try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('존재하지 않는 유저입니다.');
+      }
+
+      // 1. S3 삭제
+      if (user.profileImage) {
+        try {
+          await this.s3Client.send(
+            new DeleteObjectCommand({
+              Bucket: this.bucketName,
+              Key: user.profileImage,
+            }),
+          );
+        } catch (e) {
+          console.error('S3 삭제 실패 (무시):', e);
+        }
+      }
+
+      // 2. user 삭제 (cascade로 refresh token 자동 삭제)
       await this.prisma.user.delete({
         where: { id: userId },
       });

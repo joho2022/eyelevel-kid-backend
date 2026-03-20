@@ -54,7 +54,6 @@ export class UserController {
 
     return new ProfileImageUploadUrlResponseDto(
       result.uploadUrl,
-      result.token,
       result.imageUrl,
     );
   }
