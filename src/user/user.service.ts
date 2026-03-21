@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
@@ -11,14 +12,12 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-
-// import { supabase } from '../supabase/supabase.client';
-// import { ProfileImageUploadUrlResponseDto } from './dto/response/profile-image-upload-url.response.dto';
+import { UserResponseDto } from './dto/response/user.response.dto';
 
 @Injectable()
 export class UserService {
-  private s3Client: S3Client;
-  private bucketName: string;
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
 
   constructor(private readonly prisma: PrismaService) {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -48,15 +47,29 @@ export class UserService {
     });
   }
 
-  async findById(userId: number) {
-    return this.prisma.user.findUnique({
-      where: {
-        id: userId,
+  // MARK: - 내 정보 조회
+  async findMyProfile(userId: number): Promise<UserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        nickname: true,
+        profileImage: true,
       },
     });
+
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 유저입니다.');
+    }
+
+    return this.toUserResponseDto(user);
   }
 
-  async updateUser(userId: number, dto: UpdateUserRequestDto) {
+  // MARK: - 내 정보 수정
+  async updateMyProfile(
+    userId: number,
+    dto: UpdateUserRequestDto,
+  ): Promise<UserResponseDto> {
     if (dto.nickname) {
       const existingUser = await this.prisma.user.findFirst({
         where: {
@@ -72,71 +85,116 @@ export class UserService {
       }
     }
 
-    return this.prisma.user.update({
-      where: {
-        id: userId,
+    try {
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(dto.nickname !== undefined && { nickname: dto.nickname }),
+          ...(dto.profileImageKey !== undefined && {
+            profileImage: dto.profileImageKey,
+          }),
+        },
+        select: {
+          id: true,
+          nickname: true,
+          profileImage: true,
+        },
+      });
+
+      return this.toUserResponseDto(updatedUser);
+    } catch (error) {
+      console.error('updateMyProfile error:', error);
+      throw new InternalServerErrorException(
+        '회원 정보 수정 중 오류가 발생했습니다.',
+      );
+    }
+  }
+
+  // MARK: - 프로필 이미지 업로드용 URL 생성
+  async createProfileImageUploadUrl(userId: number): Promise<{
+    uploadUrl: string;
+    key: string;
+  }> {
+    const key = `users/${userId}/profile.jpg`;
+
+    try {
+      const uploadUrl = await getSignedUrl(
+        this.s3Client,
+        new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+          ContentType: 'image/jpeg',
+        }),
+        { expiresIn: 3600 },
+      );
+
+      return {
+        uploadUrl,
+        key,
+      };
+    } catch (error) {
+      console.error('createProfileImageUploadUrl error:', error);
+      throw new InternalServerErrorException(
+        '프로필 이미지 업로드 URL 생성에 실패했습니다.',
+      );
+    }
+  }
+
+  // MARK: - 내 프로필 이미지 조회용 URL만 따로 재발급
+  async getMyProfileImageUrl(userId: number): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profileImage: true,
       },
-      data: {
-        nickname: dto.nickname,
-        profileImage: dto.profileImage,
-      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 유저입니다.');
+    }
+
+    if (!user.profileImage) {
+      return null;
+    }
+
+    return this.createProfileImageReadUrl(user.profileImage);
+  }
+
+  // MARK: - 조회 응답 DTO 변환
+  private async toUserResponseDto(user: {
+    id: number;
+    nickname: string | null;
+    profileImage: string | null;
+  }): Promise<UserResponseDto> {
+    let profileImageUrl: string | null = null;
+
+    if (user.profileImage) {
+      profileImageUrl = await this.createProfileImageReadUrl(user.profileImage);
+    }
+
+    return new UserResponseDto({
+      id: user.id,
+      nickname: user.nickname,
+      profileImageUrl,
     });
   }
 
-  // async createProfileImageUploadUrl(userId: number) {
-  //   const filePath = `users/${userId}/profile.jpg`;
-
-  //   await supabase.storage.from('images').remove([filePath]);
-
-  //   const { data, error } = await supabase.storage
-  //     .from('images')
-  //     .createSignedUploadUrl(filePath);
-
-  //   if (error) {
-  //     console.error('Supabase Error:', error);
-
-  //     throw new InternalServerErrorException(
-  //       '프로필 이미지를 업로드할 수 없습니다. 잠시 후 다시 시도해주세요.',
-  //     );
-  //   }
-
-  //   // public url 생성
-  //   const { data: publicData } = supabase.storage
-  //     .from('images')
-  //     .getPublicUrl(filePath);
-
-  //   return {
-  //     uploadUrl: data.signedUrl,
-  //     token: data.token,
-  //     imageUrl: `${publicData.publicUrl}?v=${Date.now()}`,
-  //   };
-  // }
-
-  async createProfileImageUploadUrl(userId: number) {
-    const key = `users/${userId}/profile.jpg`;
-
-    const uploadUrl = await getSignedUrl(
-      this.s3Client,
-      new PutObjectCommand({
-        Bucket: this.bucketName,
-        Key: key,
-        ContentType: 'image/jpeg',
-      }),
-      { expiresIn: 3600 },
-    );
-
-    const imageUrl = await getSignedUrl(
-      this.s3Client,
-      new GetObjectCommand({
-        Bucket: this.bucketName,
-        Key: key,
-      }),
-      { expiresIn: 3600 },
-    );
-
-    return {
-      uploadUrl,
-      imageUrl,
-    };
+  // MARK: - 프로필 이미지 읽기용 presigned URL 생성
+  private async createProfileImageReadUrl(key: string): Promise<string> {
+    try {
+      return await getSignedUrl(
+        this.s3Client,
+        new GetObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+        { expiresIn: 3600 },
+      );
+    } catch (error) {
+      console.error('createProfileImageReadUrl error:', error);
+      throw new InternalServerErrorException(
+        '프로필 이미지 조회 URL 생성에 실패했습니다.',
+      );
+    }
   }
 }

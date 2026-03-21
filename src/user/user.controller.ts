@@ -22,10 +22,7 @@ export class UserController {
   @Get('me')
   async getMe(@Req() req: any): Promise<UserResponseDto> {
     const userId = req.user.sub;
-
-    const user = await this.userService.findById(userId);
-
-    return new UserResponseDto(user);
+    return this.userService.findMyProfile(userId);
   }
 
   // MARK: - 닉네임 / 프로필 수정
@@ -36,25 +33,30 @@ export class UserController {
     @Body() dto: UpdateUserRequestDto,
   ): Promise<UserResponseDto> {
     const userId = req.user.sub;
-
-    const user = await this.userService.updateUser(userId, dto);
-
-    return new UserResponseDto(user);
+    return this.userService.updateMyProfile(userId, dto);
   }
 
-  // MARK: -프로필 이미지 업로드 URL 생성
-  @Post('profile-image/upload-url')
+  // MARK: - 프로필 이미지 업로드 URL 생성
   @UseGuards(JwtAuthGuard)
+  @Post('profile-image/upload-url')
   async createProfileImageUploadUrl(
     @Req() req: any,
   ): Promise<ProfileImageUploadUrlResponseDto> {
     const userId = req.user.sub;
-
     const result = await this.userService.createProfileImageUploadUrl(userId);
 
-    return new ProfileImageUploadUrlResponseDto(
-      result.uploadUrl,
-      result.imageUrl,
-    );
+    return new ProfileImageUploadUrlResponseDto(result.uploadUrl, result.key);
+  }
+
+  // MARK: - 프로필 이미지 조회 URL 재발급
+  @UseGuards(JwtAuthGuard)
+  @Get('profile-image/url')
+  async getProfileImageUrl(
+    @Req() req: any,
+  ): Promise<{ profileImageUrl: string | null }> {
+    const userId = req.user.sub;
+    const profileImageUrl = await this.userService.getMyProfileImageUrl(userId);
+
+    return { profileImageUrl };
   }
 }

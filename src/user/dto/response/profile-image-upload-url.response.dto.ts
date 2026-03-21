@@ -1,10 +1,9 @@
 export class ProfileImageUploadUrlResponseDto {
   uploadUrl: string;
+  key: string;
 
-  imageUrl: string;
-
-  constructor(uploadUrl: string, imageUrl: string) {
+  constructor(uploadUrl: string, key: string) {
     this.uploadUrl = uploadUrl;
-    this.imageUrl = imageUrl;
+    this.key = key;
   }
 }

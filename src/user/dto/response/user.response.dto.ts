@@ -1,11 +1,15 @@
 export class UserResponseDto {
   id: number;
   nickname: string | null;
-  profileImage: string | null;
+  profileImageUrl: string | null;
 
-  constructor(user: any) {
+  constructor(user: {
+    id: number;
+    nickname: string | null;
+    profileImageUrl: string | null;
+  }) {
     this.id = user.id;
     this.nickname = user.nickname;
-    this.profileImage = user.profileImage;
+    this.profileImageUrl = user.profileImageUrl;
   }
 }
