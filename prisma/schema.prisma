@@ -58,3 +58,18 @@ model Question {
 
   createdAt DateTime @default(now())
 }
+
+model AppConfig {
+  id Int @id @default(autoincrement())
+
+  minimumVersion String @default("1.0.0")
+  latestVersion  String @default("1.0.0")
+
+  messageShow     Boolean @default(false)
+  messageTitle    String?
+  messageBody     String?
+  messageBlocking Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { QuestionModule } from './question/question.module';
+import { AppConfigModule } from './app-config/app-config.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -25,12 +26,14 @@ import * as Joi from 'joi';
         AWS_ENDPOINT_URL: Joi.string().required(),
         AWS_ACCESS_KEY_ID: Joi.string().required(),
         AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+        ADMIN_SECRET: Joi.string().required(),
       }),
     }),
     PrismaModule,
     AuthModule,
     UserModule,
     QuestionModule,
+    AppConfigModule,
   ],
 })
 export class AppModule {}
