@@ -10,11 +10,54 @@ import { AiGuardService } from 'src/ai/ai.guard.service';
 
 @Injectable()
 export class QuestionService {
+  private static readonly KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiService: AiService,
     private readonly aiGuard: AiGuardService,
   ) {}
+
+  private formatKstDate(date: Date) {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    const parts = formatter.formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private getKstDayRange(year: number, month: number, day: number) {
+    const start = new Date(
+      Date.UTC(year, month - 1, day, 0, 0, 0, 0) -
+        QuestionService.KST_OFFSET_MS,
+    );
+    const end = new Date(
+      Date.UTC(year, month - 1, day + 1, 0, 0, 0, 0) -
+        QuestionService.KST_OFFSET_MS -
+        1,
+    );
+
+    return { start, end };
+  }
+
+  private getKstMonthRange(year: number, month: number) {
+    const start = this.getKstDayRange(year, month, 1).start;
+    const end = new Date(
+      Date.UTC(year, month, 1, 0, 0, 0, 0) -
+        QuestionService.KST_OFFSET_MS -
+        1,
+    );
+
+    return { start, end };
+  }
 
   // MARK: - 질문 생성
   async createQuestion(userId: number, dto: AskQuestionRequestDto) {
@@ -39,8 +82,7 @@ export class QuestionService {
 
   // MARK: - 달력 질문 날짜 조회
   async getCalendarSummary(userId: number, year: number, month: number) {
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 0, 23, 59, 59);
+    const { start, end } = this.getKstMonthRange(year, month);
 
     const questions = await this.prisma.question.findMany({
       where: {
@@ -58,16 +100,10 @@ export class QuestionService {
     const dateSet = new Set<string>();
 
     for (const question of questions) {
-      const date = new Date(
-        question.createdAt.getFullYear(),
-        question.createdAt.getMonth(),
-        question.createdAt.getDate(),
-      );
-
-      dateSet.add(date.toISOString());
+      dateSet.add(this.formatKstDate(question.createdAt));
     }
 
-    const dates = Array.from(dateSet);
+    const dates = Array.from(dateSet).sort();
 
     return new CalendarSummaryResponseDto(year, month, dates);
   }
@@ -79,8 +115,7 @@ export class QuestionService {
     month: number,
     day: number,
   ) {
-    const start = new Date(year, month - 1, day);
-    const end = new Date(year, month - 1, day, 23, 59, 59);
+    const { start, end } = this.getKstDayRange(year, month, day);
 
     const questions = await this.prisma.question.findMany({
       where: {
@@ -95,7 +130,7 @@ export class QuestionService {
       },
     });
 
-    const date = start.toISOString();
+    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     return new CalendarDayResponseDto(date, questions);
   }
